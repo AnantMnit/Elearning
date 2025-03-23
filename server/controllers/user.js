@@ -154,5 +154,7 @@ export const resendOtp = TryCatch(async(req, res) => {
     res.status(200).json({
         message: "New OTP sent to your email",
         activationToken,
+    const token = await jwt.sign({_id: user._id}, process.env.Jwt_Sec,{
+        expiresIn: "15d",
     });
 });
