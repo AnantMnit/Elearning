@@ -22,7 +22,7 @@ export const register = TryCatch(async(req,res)=>{
             password: hashPassword
         }
 
-        const otp = Math.floor(Math.random() * 1000);
+        const otp = Math.floor(Math.random() * 1000000);
 
         const activationToken = jwt.sign({
             user,
