@@ -4,157 +4,97 @@ import jwt from "jsonwebtoken";
 import sendMail from "../middlewares/sendMail.js";
 import TryCatch from "../middlewares/TryCatch.js";
 
-// Register a new user
-export const register = TryCatch(async(req, res) => {
-    const { email, name, password } = req.body;
+export const register = TryCatch(async(req,res)=>{
+    const {email,name, password} = req.body
 
-    // Check if user already exists
-    let user = await User.findOne({ email });
+        let user = await User.findOne({email});
 
-    if (user) {
-        return res.status(400).json({
-            message: "User Already Exists",
+        if (user)
+            return res.status(400).json({
+                message:"User Already Exists",
         });
-    }
 
-    // Hash the password
-    const hashPassword = await bcrypt.hash(password, 10);
+        const hashPassword = await bcrypt.hash(password, 10)
 
-    // Create a temporary user object
-    user = {
-        name,
-        email,
-        password: hashPassword
-    };
+        user = {
+            name,
+            email,
+            password: hashPassword
+        }
 
-    // Generate OTP
-    const otp = Math.floor(Math.random() * 1000);
+        const otp = Math.floor(Math.random() * 1000);
 
-    // Create activation token with OTP
-    const activationToken = jwt.sign({
-        user,
-        otp,
-    }, process.env.Activation_Secret, {
-        expiresIn: "5m", // Token expires in 5 minutes
-    });
+        const activationToken = jwt.sign({
+            user,
+            otp,
+        }, process.env.Activation_Secret,
+        {
+            expiresIn: "5m",
+        }
+    );
 
-    // Prepare email data
     const data = {
         name,
         otp,
     };
 
-    // Send OTP via email
     await sendMail(
         email,
         "E learning",
         data 
-    );
+    )
 
-    // Respond with success message and activation token
     res.status(200).json({
-        message: "OTP sent to your email",
+        message: "Otp sent to your Email",
         activationToken,
     });
-});
+})
 
-// Verify user with OTP
-export const verifyUser = TryCatch(async(req, res) => {
-    const { otp, activationToken } = req.body;
+export const verifyUser = TryCatch(async(req,res)=>{
+     const {otp, activationToken} = req.body
+     const verify = jwt.verify(activationToken, process.env.Activation_Secret)
 
-    try {
-        // Verify the activation token
-        const verify = jwt.verify(activationToken, process.env.Activation_Secret);
+     if(!verify) return res.status(400).json({
+        message: "otp expired",
+     });
 
-        // Check if OTP matches
-        if (verify.otp !== otp) {
-            return res.status(400).json({
-                message: "Wrong OTP",
-            });
-        }
+     if(verify.otp !== otp) 
+        return res.status(400).json({
+            message: "Wrong otp",
+        });
 
-        // Check if user already exists
-        const existingUser = await User.findOne({ email: verify.user.email });
-
-        if (existingUser) {
-            return res.status(400).json({
-                message: "User with this email already exists",
-            });
-        }
-
-        // Create the user in the database
         await User.create({
             name: verify.user.name,
             email: verify.user.email,
             password: verify.user.password,
         });
 
-        // Respond with success message
         res.json({
-            message: "User Registered"
+            message:"User Registered"
         });
-
-    } catch (error) {
-        // Handle JWT expiration error
-        if (error.name === "TokenExpiredError") {
-            return res.status(400).json({
-                message: "Activation token has expired. Please request a new OTP.",
-            });
-        }
-
-        // Handle other JWT errors (e.g., invalid token)
-        return res.status(400).json({
-            message: "Invalid activation token.",
-        });
-    }
 });
 
-// Resend OTP
-export const resendOtp = TryCatch(async(req, res) => {
-    const { email } = req.body;
+export const loginUser = TryCatch(async(req, res)=>{
+    const{email,password} = req.body
+    const user = await User.findOne({email})
 
-    // Check if user exists
-    const user = await User.findOne({ email });
-
-    if (!user) {
-        return res.status(400).json({
-            message: "User not found",
-        });
-    }
-
-    // Generate a new OTP
-    const otp = Math.floor(Math.random() * 1000);
-
-    // Create a new activation token
-    const activationToken = jwt.sign({
-        user: {
-            name: user.name,
-            email: user.email,
-            password: user.password,
-        },
-        otp,
-    }, process.env.Activation_Secret, {
-        expiresIn: "5m", // Token expires in 5 minutes
+    if (!user) return res.status(400).json({
+        message: "No User with this email",
     });
 
-    // Prepare email data
-    const data = {
-        name: user.name,
-        otp,
-    };
+    const mathPassword = await bcrypt.compare(password, user.password);
 
-    // Send new OTP via email
-    await sendMail(
-        email,
-        "E learning",
-        data 
-    );
+    if (!mathPassword)  return res.status(400).json({
+        message: "wrong password",
+    });
 
-    // Respond with success message and new activation token
-    res.status(200).json({
-        message: "New OTP sent to your email",
-        activationToken,
     const token = await jwt.sign({_id: user._id}, process.env.Jwt_Sec,{
         expiresIn: "15d",
+    });
+
+    res.json({
+        message: `Welcome back ${user.name}`,
+        token,
+        user,
     });
 });
