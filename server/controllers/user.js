@@ -96,5 +96,5 @@ export const loginUser = TryCatch(async(req, res)=>{
         message: `Welcome back ${user.name}`,
         token,
         user,
-    })
-})
+    });
+});
