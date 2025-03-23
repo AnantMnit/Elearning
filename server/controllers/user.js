@@ -67,7 +67,7 @@ export const verifyUser = TryCatch(async(req,res)=>{
             name: verify.user.name,
             email: verify.user.email,
             password: verify.user.password,
-        });j
+        });
 
         res.json({
             message:"User Registered"
@@ -88,7 +88,7 @@ export const loginUser = TryCatch(async(req, res)=>{
         message: "wrong password",
     });
 
-    const token = await jwt.sign.apply({_id: user._id}, process.env.Jwt_Sec,{
+    const token = await jwt.sign({_id: user._id}, process.env.Jwt_Sec,{
         expiresIn: "15d",
     });
 
